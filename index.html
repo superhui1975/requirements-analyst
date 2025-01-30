@@ -3,105 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>需求分析智能体 - 基于拆推评算框架</title>
+    <title>需求分析智能体</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .loading {
-            display: none;
-            margin: 20px 0;
-        }
         .chat-container {
-            height: 400px;
+            height: 70vh;
             overflow-y: auto;
             margin-bottom: 20px;
             border: 1px solid #ddd;
             padding: 15px;
             border-radius: 5px;
+            background-color: #f8f9fa;
         }
         .message {
             margin-bottom: 15px;
             padding: 10px;
-            border-radius: 5px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
         }
         .user-message {
             background-color: #e3f2fd;
-            margin-left: 20%;
+            margin-left: auto;
+            margin-right: 10px;
         }
         .ai-message {
-            background-color: #f5f5f5;
-            margin-right: 20%;
+            background-color: #ffffff;
+            margin-right: auto;
+            margin-left: 10px;
+            border: 1px solid #e0e0e0;
+        }
+        .loading {
+            display: none;
+            margin: 10px;
+        }
+        .file-upload {
+            margin-bottom: 10px;
+        }
+        .system-hint {
+            color: #666;
+            font-size: 0.9em;
+            text-align: center;
+            margin: 5px 0;
         }
     </style>
 </head>
 <body>
-    <div class="container mt-5">
-        <h1 class="text-center mb-4">需求分析智能体</h1>
-        <p class="text-center text-muted mb-4">基于拆推评算框架的专业需求分析工具</p>
+    <div class="container mt-4">
+        <div class="chat-container" id="chatContainer"></div>
         
-        <!-- 项目信息表单 -->
-        <div class="card mb-4">
-            <div class="card-body">
-                <h5 class="card-title">项目信息</h5>
-                <p class="card-text text-muted mb-4">请填写您的项目信息，系统将基于"拆推评算"框架为您生成专业的需求分析报告</p>
-                <form id="projectForm">
-                    <div class="mb-3">
-                        <label class="form-label">项目名称</label>
-                        <input type="text" class="form-control" id="projectName" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">行业领域</label>
-                        <input type="text" class="form-control" id="industry" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">项目阶段</label>
-                        <select class="form-control" id="stage" required>
-                            <option value="规划阶段">规划阶段</option>
-                            <option value="开发阶段">开发阶段</option>
-                            <option value="测试阶段">测试阶段</option>
-                            <option value="运维阶段">运维阶段</option>
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">项目描述</label>
-                        <textarea class="form-control" id="description" rows="3" required></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">分析需求</button>
-                </form>
+        <div class="loading text-center" id="loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">思考中...</span>
             </div>
         </div>
 
-        <!-- 对话区域 -->
-        <div class="chat-container" id="chatContainer"></div>
-        
         <!-- 输入区域 -->
-        <div class="input-group mb-3">
-            <input type="text" class="form-control" id="userInput" placeholder="请输入您的问题...">
-            <button class="btn btn-primary" id="sendButton">发送</button>
-        </div>
-
-        <!-- 加载提示 -->
-        <div class="loading text-center" id="loading">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">加载中...</span>
+        <div class="card">
+            <div class="card-body">
+                <div class="file-upload">
+                    <input type="file" class="form-control" id="fileInput" accept=".txt,.doc,.docx,.pdf">
+                    <div class="system-hint">支持上传项目相关文档（.txt, .doc, .docx, .pdf）</div>
+                </div>
+                <div class="input-group">
+                    <input type="text" class="form-control" id="userInput" placeholder="请输入您的问题或描述...">
+                    <button class="btn btn-primary" id="sendButton">发送</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 页面底部 -->
-    <footer class="container text-center text-muted mt-5 mb-3">
-        <p>基于拆推评算框架的需求分析智能体 | <a href="https://github.com/superhui1975/requirements-analyst" target="_blank">GitHub</a></p>
-        <p class="small">© 2024 需求分析智能体</p>
-    </footer>
-
     <script>
         // API配置
-        const API_KEY = prompt('请输入您的API密钥：');  // 在使用时输入API密钥
+        const API_KEY = prompt('请输入您的API密钥：');
         const API_URL = 'https://api.deepseek.com/v1/chat/completions';
 
         // 如果没有输入API密钥，显示提示
         if (!API_KEY) {
             alert('请刷新页面并输入有效的API密钥才能使用本服务。');
         }
+
+        // 系统角色定义
+        const SYSTEM_ROLE = `你是一个创业需求分析助手，专门帮助创业者和创业团队进行项目需求分析。你使用"拆推评算"方法论：
+
+1. 拆（需求拆解）：分析用户群体、使用场景、行为路径和痛点
+2. 推（行为推导）：推导决策路径、场景演化、需求优先级和商业模式
+3. 评（需求评估）：评估刚需性、支付意愿、使用频率和市场接受度
+4. 算（市场规模）：测算目标市场、获客成本、收入模型和盈利能力
+
+你需要：
+- 主动引导创业者厘清项目定位
+- 协助识别核心用户群体
+- 帮助发现关键需求点
+- 指导商业模式设计
+- 及时指出潜在风险
+
+如果信息不足，你应该主动提问，引导用户提供更多信息。`;
+
+        // 欢迎消息
+        const WELCOME_MESSAGE = `您好，我是创业需求分析助手。让我们通过"拆、推、评、算"的方法，帮您深入分析项目需求，提升创业成功率。
+
+我可以帮您：
+1. 深入分析目标用户和核心需求
+2. 预测用户决策路径
+3. 评估商业价值
+4. 测算市场空间
+
+请告诉我您的创业项目，或上传项目相关文档，我们开始分析。`;
 
         // 显示消息
         function addMessage(content, isUser = false) {
@@ -130,42 +138,43 @@
             return data.choices[0].message.content;
         }
 
-        // 处理项目分析
-        document.getElementById('projectForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        // 处理文件上传
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
             const loading = document.getElementById('loading');
             loading.style.display = 'block';
 
-            const projectInfo = {
-                projectName: document.getElementById('projectName').value,
-                industry: document.getElementById('industry').value,
-                stage: document.getElementById('stage').value,
-                description: document.getElementById('description').value
-            };
-
-            const messages = [
-                {
-                    role: 'system',
-                    content: '你是一个专业的需求分析助手，基于"拆推评算"框架帮助分析项目需求。'
-                },
-                {
-                    role: 'user',
-                    content: `请分析以下项目：${JSON.stringify(projectInfo)}`
-                }
-            ];
-
             try {
-                addMessage(JSON.stringify(projectInfo, null, 2), true);
-                const response = await sendToAPI(messages);
-                addMessage(response);
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const content = event.target.result;
+                    addMessage(`已上传文件：${file.name}`, true);
+                    
+                    const messages = [
+                        {
+                            role: 'system',
+                            content: SYSTEM_ROLE
+                        },
+                        {
+                            role: 'user',
+                            content: `我上传了一个项目文档，请基于"拆推评算"方法论帮我分析：\n${content}`
+                        }
+                    ];
+
+                    const response = await sendToAPI(messages);
+                    addMessage(response);
+                };
+                reader.readAsText(file);
             } catch (error) {
-                addMessage('抱歉，发生错误：' + error.message);
+                addMessage('抱歉，文件处理过程中发生错误：' + error.message);
             } finally {
                 loading.style.display = 'none';
             }
         });
 
-        // 处理聊天消息
+        // 处理对话消息
         document.getElementById('sendButton').addEventListener('click', async () => {
             const userInput = document.getElementById('userInput');
             const message = userInput.value.trim();
@@ -175,19 +184,19 @@
             loading.style.display = 'block';
             userInput.value = '';
 
-            const messages = [
-                {
-                    role: 'system',
-                    content: '你是一个专业的需求分析助手，基于"拆推评算"框架帮助分析项目需求。'
-                },
-                {
-                    role: 'user',
-                    content: message
-                }
-            ];
-
             try {
                 addMessage(message, true);
+                const messages = [
+                    {
+                        role: 'system',
+                        content: SYSTEM_ROLE
+                    },
+                    {
+                        role: 'user',
+                        content: message
+                    }
+                ];
+
                 const response = await sendToAPI(messages);
                 addMessage(response);
             } catch (error) {
@@ -201,6 +210,13 @@
         document.getElementById('userInput').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 document.getElementById('sendButton').click();
+            }
+        });
+
+        // 页面加载时显示欢迎消息
+        window.addEventListener('load', async () => {
+            if (API_KEY) {
+                addMessage(WELCOME_MESSAGE);
             }
         });
     </script>
